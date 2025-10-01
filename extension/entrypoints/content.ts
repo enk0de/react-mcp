@@ -21,10 +21,6 @@ export default defineContentScript({
   main() {
     const mcp = new ReactMCP();
     mcp.init();
-
-    return () => {
-      mcp.dispose();
-    };
   },
 });
 
@@ -63,10 +59,6 @@ class ReactMCP {
     this.setupErrorBoundary();
     this.setupOverlayUpdateListeners();
     this.setupMessageListener();
-  }
-
-  dispose() {
-    this.guideOverlay.dispose();
   }
 
   private setupMessageListener() {
@@ -119,15 +111,15 @@ class ReactMCP {
         return wrappedHook ?? originalHook;
       },
       set(value) {
+        originalHook = value;
+        wrappedHook = wrap(value);
+
         if (!this.isReactDetected) {
           notifyBackgroundScript({
             type: "REACT_DETECTED",
           });
           this.isReactDetected = true;
         }
-
-        originalHook = value;
-        wrappedHook = wrap(value);
       },
     });
 
