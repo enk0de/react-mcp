@@ -87,6 +87,7 @@ function connectWebSocket() {
         reconnectTimer = null;
       }
 
+      console.log("from connect websocket open");
       // Re-establish handshakes for all tabs with React
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
@@ -203,7 +204,7 @@ function handleMCPServerMessage(message: MCPServerMessage) {
       const state = handshakeState.get(tabId);
       if (state) {
         // Clear pong timeout
-        if (state.pongTimeout !== null) {
+        if (state.pongTimeout != null) {
           clearTimeout(state.pongTimeout);
           state.pongTimeout = null;
         }
@@ -238,6 +239,10 @@ function startPingInterval(tabId: number) {
     sendWebSocketMessage({ type: "PING", data: { tabId } });
 
     // Set pong timeout
+    if (state.pongTimeout != null) {
+      clearTimeout(state.pongTimeout);
+    }
+
     state.pongTimeout = setTimeout(() => {
       console.error("[React MCP Background] PONG timeout for tab:", tabId);
       handleConnectionLost(tabId);
@@ -268,6 +273,8 @@ function handleConnectionLost(tabId: number) {
     state.isHandshaked = false;
     stopPingInterval(tabId);
   }
+
+  console.log("from connection lost/");
 
   // Try to re-establish handshake
   attemptHandshake(tabId);
