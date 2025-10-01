@@ -77,7 +77,7 @@ export class GuideOverlay {
         height: "60px",
         padding: "12px",
       },
-      { duration: 1, ease: cubicBezier(0.25, 1, 0.5, 1) }
+      { duration: 0.5, ease: cubicBezier(0.25, 1, 0.5, 1) }
     );
     this.container.style.pointerEvents = "none";
     this.container.innerHTML =
@@ -97,7 +97,7 @@ export class GuideOverlay {
         pointerEvents: "auto",
         width: "40px",
         height: "40px",
-        padding: "none",
+        padding: "0",
       },
       { duration: 0.5, ease: cubicBezier(0.25, 1, 0.5, 1) }
     );
