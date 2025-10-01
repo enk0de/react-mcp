@@ -1,6 +1,7 @@
 /// <reference path="../.wxt/wxt.d.ts" />
 
 import { nanoid } from "nanoid";
+import { GuideOverlay } from "../libs/guide-overlay";
 import { FiberNode } from "../types/fiber-node";
 import type {
   ContentMessage,
@@ -20,6 +21,10 @@ export default defineContentScript({
   main() {
     const mcp = new ReactMCP();
     mcp.init();
+
+    return () => {
+      mcp.dispose();
+    };
   },
 });
 
@@ -45,18 +50,23 @@ class ReactMCP {
   private rafId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
 
-  private isReactDetected = false;
+  private guideOverlay: GuideOverlay;
 
   constructor() {
-    console.log("constructed");
+    this.guideOverlay = new GuideOverlay();
   }
 
   init() {
+    this.guideOverlay.create();
     this.setupReactDevToolsHook();
     this.setupClickListener();
     this.setupErrorBoundary();
     this.setupOverlayUpdateListeners();
     this.setupMessageListener();
+  }
+
+  dispose() {
+    this.guideOverlay.dispose();
   }
 
   private setupMessageListener() {
