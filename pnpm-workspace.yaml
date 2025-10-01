@@ -1,0 +1,7 @@
+packages:
+  - extension
+  - mcp-server
+  - test-app
+
+ignoredBuiltDependencies:
+  - esbuild

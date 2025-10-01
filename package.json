@@ -1,13 +1,24 @@
 {
   "name": "react-mcp",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "MCP server with browser extension for React development",
+  "private": true,
   "scripts": {
+    "build": "pnpm -r build",
+    "build:extension": "pnpm --filter @react-mcp/extension build",
+    "build:mcp": "pnpm --filter @react-mcp/server build",
+    "dev": "pnpm -r --parallel dev",
+    "dev:extension": "pnpm --filter @react-mcp/extension dev",
+    "dev:mcp": "pnpm --filter @react-mcp/server dev",
+    "dev:test-app": "pnpm --filter test-app dev",
+    "start:mcp": "pnpm --filter @react-mcp/server start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["mcp", "react", "browser-extension"],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.16.1"
+  "packageManager": "pnpm@10.16.1",
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
 }
