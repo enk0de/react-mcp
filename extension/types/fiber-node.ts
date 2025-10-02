@@ -1,5 +1,5 @@
 export interface FiberNode {
-  type: string | Function;
+  type: string | (Function & { displayName?: string });
   flags: number;
   subtreeFlags: number;
   deletions: FiberNode[] | null;
