@@ -3,47 +3,20 @@ import type { FiberNode } from "../types/fiber-node";
 import { RenderedComponentData } from "../types/messages";
 import { getComponentName } from "../utils/get-component-name";
 
-/**
- * Component registry interface for FiberAnalyzer
- */
 export interface ComponentRegistry {
-  /**
-   * Get component info by DOM element
-   */
   get(element: HTMLElement): RenderedComponentData | undefined;
-
-  /**
-   * Set component info for DOM element
-   */
   set(element: HTMLElement, info: RenderedComponentData): void;
-
-  /**
-   * Delete component info by DOM element
-   */
   delete(element: HTMLElement): void;
-
-  /**
-   * Check if component exists for DOM element
-   */
   has(element: HTMLElement): boolean;
 }
 
-/**
- * React Fiber Flags (from ReactFiberFlags.js)
- */
 export const FiberFlags = {
-  Placement: 0b0000000000000010, // 2 - New node
-  Update: 0b0000000000000100, // 4 - Props or state changed
-  Deletion: 0b0000000000001000, // 8 - Node will be deleted
+  Placement: 0b0000000000000010,
+  Update: 0b0000000000000100,
+  Deletion: 0b0000000000001000,
 } as const;
 
-/**
- * FiberAnalyzer - Analyzes React Fiber tree and manages component registry
- */
 export class FiberAnalyzer {
-  /**
-   * Analyze fiber tree and update component registry
-   */
   analyze(
     fiberRoot: { current: FiberNode } | null | undefined,
     componentRegistry: ComponentRegistry
@@ -53,21 +26,16 @@ export class FiberAnalyzer {
     this.traverseFiber(fiberRoot.current, componentRegistry);
   }
 
-  /**
-   * Recursively remove deleted fiber and all descendants from registry
-   */
   private removeDeletedFiber(
     fiber: FiberNode,
     componentRegistry: ComponentRegistry
   ): void {
     if (!fiber) return;
 
-    // Remove from registry if it has a DOM node
     if (fiber.stateNode && fiber.stateNode instanceof HTMLElement) {
       componentRegistry.delete(fiber.stateNode);
     }
 
-    // Recursively remove all children
     let child = fiber.child;
     while (child) {
       this.removeDeletedFiber(child, componentRegistry);
@@ -75,16 +43,12 @@ export class FiberAnalyzer {
     }
   }
 
-  /**
-   * Traverse fiber tree and process each fiber node
-   */
   private traverseFiber(
     fiber: FiberNode,
     componentRegistry: ComponentRegistry
   ): void {
     if (!fiber) return;
 
-    // Handle deletions first - process deleted children and all their descendants
     if (fiber.deletions && fiber.deletions.length > 0) {
       console.log(
         `[FiberAnalyzer] Processing ${
@@ -97,12 +61,10 @@ export class FiberAnalyzer {
       });
     }
 
-    // Process current fiber's flags
     if (fiber.flags) {
       this.processFiberFlags(fiber, componentRegistry);
     }
 
-    // Extract/update component info if not already handled by flags
     if (
       fiber.stateNode &&
       fiber.stateNode instanceof HTMLElement &&
@@ -111,8 +73,6 @@ export class FiberAnalyzer {
       this.registerComponent(fiber, componentRegistry);
     }
 
-    // Only traverse children if subtreeFlags indicates there are changes in subtree
-    // or if this is the initial traversal (no flags set yet)
     if (fiber.subtreeFlags | 0) {
       let child = fiber.child;
       while (child) {
@@ -122,9 +82,6 @@ export class FiberAnalyzer {
     }
   }
 
-  /**
-   * Process fiber flags and update component registry accordingly
-   */
   private processFiberFlags(
     fiber: FiberNode,
     componentRegistry: ComponentRegistry
@@ -135,7 +92,6 @@ export class FiberAnalyzer {
       console.log(
         `[FiberAnalyzer] Component placed: ${getComponentName(fiber)}`
       );
-      // Extract component info for new placement
       if (fiber.stateNode && fiber.stateNode instanceof HTMLElement) {
         this.registerComponent(fiber, componentRegistry);
       }
@@ -145,7 +101,6 @@ export class FiberAnalyzer {
       console.log(
         `[FiberAnalyzer] Component updated: ${getComponentName(fiber)}`
       );
-      // Update component info
       if (fiber.stateNode && fiber.stateNode instanceof HTMLElement) {
         this.updateComponent(fiber, componentRegistry);
       }
@@ -157,14 +112,10 @@ export class FiberAnalyzer {
           fiber
         )}`
       );
-      // This fiber will be deleted, don't process further
       return;
     }
   }
 
-  /**
-   * Register a new component in the registry
-   */
   private registerComponent(
     fiber: FiberNode,
     componentRegistry: ComponentRegistry
@@ -178,9 +129,6 @@ export class FiberAnalyzer {
     componentRegistry.set(fiber.stateNode, data);
   }
 
-  /**
-   * Update an existing component in the registry
-   */
   private updateComponent(
     fiber: FiberNode,
     componentRegistry: ComponentRegistry

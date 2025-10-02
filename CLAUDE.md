@@ -38,6 +38,13 @@ Browser (React App)
   → Claude Desktop (stdio)
 ```
 
+## Coding Principles
+
+### Comments
+- Write comments only for core logic and complex algorithms
+- Avoid excessive or unnecessary comments
+- Let the code be self-documenting where possible
+
 ## Package Manager
 
 This project uses **pnpm** (v10.16.1). Always use `pnpm` commands.
