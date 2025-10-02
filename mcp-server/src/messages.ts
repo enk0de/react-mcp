@@ -65,7 +65,7 @@ const WebSocketMessageSchema = z.discriminatedUnion("type", [
     }),
   }),
   z.object({
-    type: z.literal("REACT_ERROR"),
+    type: z.literal("ERROR"),
     data: ReactErrorDataSchema.extend({
       tabId: z.number(),
     }),

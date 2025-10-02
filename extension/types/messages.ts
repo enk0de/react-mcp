@@ -56,7 +56,7 @@ const ContentMessageSchema = z.discriminatedUnion("type", [
     data: RenderedComponentDataSchema,
   }),
   z.object({
-    type: z.literal("REACT_ERROR"),
+    type: z.literal("ERROR"),
     data: ErrorDataSchema,
   }),
   z.object({

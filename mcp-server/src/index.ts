@@ -267,7 +267,7 @@ class ReactMCPServer {
         break;
       }
 
-      case "REACT_ERROR": {
+      case "ERROR": {
         const { message: errorMessage, componentName, source } = message.data;
         this.errors.push({
           componentName: componentName || "Unknown",

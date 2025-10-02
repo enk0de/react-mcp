@@ -332,61 +332,7 @@ function handleContentMessage(
     return;
   }
 
-  // Transform content message to WebSocket message with proper typing
-  let wsMessage: WebSocketMessage;
-
-  switch (message.type) {
-    case "FIBER_COMMITED":
-      wsMessage = {
-        type: "FIBER_COMMITED",
-        data: {
-          components: message.data,
-          tabId,
-        },
-      };
-      break;
-
-    case "COMPONENT_CLICKED":
-      wsMessage = {
-        type: "COMPONENT_CLICKED",
-        data: {
-          ...message.data,
-          tabId,
-        },
-      };
-      break;
-
-    case "REACT_ERROR":
-      wsMessage = {
-        type: "REACT_ERROR",
-        data: {
-          ...message.data,
-          tabId,
-        },
-      };
-      break;
-
-    case "STATE_FOR_HANDSHAKE":
-      // Initialize handshake state
-      handshakeState.set(tabId, {
-        isHandshaked: false,
-        lastPing: Date.now(),
-        pingInterval: null,
-        pongTimeout: null,
-      });
-
-      // Send HANDSHAKE with state data
-      wsMessage = {
-        type: "HANDSHAKE",
-        data: {
-          tabId,
-          ...message.data,
-        },
-      };
-      break;
-  }
-
-  sendWebSocketMessage(wsMessage);
+  sendWebSocketMessage(createWebSocketMessage(message, tabId));
 }
 
 function handleIconClick(tab: chrome.tabs.Tab) {
@@ -402,5 +348,58 @@ function handleIconClick(tab: chrome.tabs.Tab) {
           error
         );
       });
+  }
+}
+
+function createWebSocketMessage(
+  message: ContentMessage,
+  tabId: number
+): WebSocketMessage {
+  switch (message.type) {
+    case "FIBER_COMMITED":
+      return {
+        type: "FIBER_COMMITED",
+        data: {
+          components: message.data,
+          tabId,
+        },
+      };
+
+    case "COMPONENT_CLICKED":
+      return {
+        type: "COMPONENT_CLICKED",
+        data: {
+          ...message.data,
+          tabId,
+        },
+      };
+
+    case "ERROR":
+      return {
+        type: "ERROR",
+        data: {
+          ...message.data,
+          tabId,
+        },
+      };
+
+    case "STATE_FOR_HANDSHAKE":
+      handshakeState.set(tabId, {
+        isHandshaked: false,
+        lastPing: Date.now(),
+        pingInterval: null,
+        pongTimeout: null,
+      });
+
+      return {
+        type: "HANDSHAKE",
+        data: {
+          tabId,
+          ...message.data,
+        },
+      };
+
+    default:
+      throw new Error(`Unsupported content message type: ${message.type}`);
   }
 }
