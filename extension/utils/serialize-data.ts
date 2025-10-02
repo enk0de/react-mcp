@@ -1,42 +1,41 @@
-export function serializeData(obj: any, depth = 0, maxDepth = 3): any {
-  // Prevent infinite recursion
-  if (depth > maxDepth) return "[Max Depth Reached]";
+/**
+ * Serializes data for transmission, handling circular references and non-serializable values
+ */
+export function serializeData(data: any): any {
+  const seen = new WeakSet();
 
-  if (obj === null || obj === undefined) return obj;
+  function serialize(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj !== "object") return obj;
 
-  // Primitives
-  if (typeof obj !== "object" && typeof obj !== "function") return obj;
+    // Handle circular references
+    if (seen.has(obj)) return "[Circular]";
+    seen.add(obj);
 
-  // Functions
-  if (typeof obj === "function") {
-    return `[Function: ${obj.name || "anonymous"}]`;
-  }
+    if (Array.isArray(obj)) {
+      return obj.map(serialize);
+    }
 
-  // Arrays
-  if (Array.isArray(obj)) {
-    return obj.map((item) => serializeData(item, depth + 1, maxDepth));
-  }
+    if (obj instanceof Date) return obj.toISOString();
+    if (obj instanceof RegExp) return obj.toString();
+    if (obj instanceof Error) return { message: obj.message, stack: obj.stack };
 
-  // DOM elements
-  if (obj instanceof HTMLElement) {
-    return `[HTMLElement: ${obj.tagName}]`;
-  }
+    // Handle functions
+    if (typeof obj === "function") return "[Function]";
 
-  // React elements
-  if (obj.$$typeof) {
-    return "[React Element]";
-  }
-
-  // Objects
-  try {
-    const serialized: any = {};
+    // Handle plain objects
+    const result: Record<string, any> = {};
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        serialized[key] = serializeData(obj[key], depth + 1, maxDepth);
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        try {
+          result[key] = serialize(obj[key]);
+        } catch {
+          result[key] = "[Unserializable]";
+        }
       }
     }
-    return serialized;
-  } catch (e) {
-    return "[Unserializable Object]";
+    return result;
   }
+
+  return serialize(data);
 }

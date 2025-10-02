@@ -1,13 +1,15 @@
 /// <reference path="../.wxt/wxt.d.ts" />
 
-import { nanoid } from "nanoid";
-import { GuideOverlay } from "../libs/guide-overlay";
-import { FiberNode } from "../types/fiber-node";
+import { FiberAnalyzer } from "../libs/fiber-analyzer";
+import { ComponentInspectorPlugin } from "../plugins/component-inspector-plugin";
+import { ErrorCapturePlugin } from "../plugins/error-capture-plugin";
+import { GuideOverlayPlugin } from "../plugins/guide-overlay-plugin";
 import type {
   ContentMessage,
-  ReactErrorData,
+  ErrorData,
   RenderedComponentData,
 } from "../types/messages";
+import type { Plugin, PluginContext } from "../types/plugin";
 
 /**
  * Content script that injects into React applications
@@ -24,41 +26,73 @@ export default defineContentScript({
   },
 });
 
-interface ComponentInfo {
-  id: string;
-  name: string;
-  props: Record<string, any>;
-  state: Record<string, any>;
-  fiber: FiberNode;
-  domNode: HTMLElement | null;
-}
-
-class ReactMCP {
-  private componentMap = new Map<HTMLElement, ComponentInfo>();
-
+class ReactMCP implements PluginContext {
+  private componentMap = new Map<HTMLElement, RenderedComponentData>();
   private selectedComponentInfo: RenderedComponentData | null = null;
-  private selectedOverlay: HTMLElement | null = null;
-  private selectedElement: HTMLElement | null = null;
+  private errors: ErrorData[] = [];
+  private isReactDetected = false;
 
-  private errorOverlays = new Map<HTMLElement, HTMLElement>();
-
-  private errors: ReactErrorData[] = [];
-  private rafId: number | null = null;
-  private resizeObserver: ResizeObserver | null = null;
-
-  private guideOverlay: GuideOverlay;
+  private plugins: Plugin[] = [];
+  private fiberAnalyzer: FiberAnalyzer;
 
   constructor() {
-    this.guideOverlay = new GuideOverlay();
+    // Initialize FiberAnalyzer
+    this.fiberAnalyzer = new FiberAnalyzer();
+
+    // Register plugins with context
+    this.plugins = [
+      new ErrorCapturePlugin(this),
+      new ComponentInspectorPlugin(this),
+      new GuideOverlayPlugin(this),
+    ];
   }
 
   init() {
-    this.guideOverlay.create();
+    // Initialize all plugins
+    this.plugins.forEach((plugin) => {
+      console.log(`[React MCP] Initializing plugin: ${plugin.name}`);
+      plugin.init();
+    });
+
     this.setupReactDevToolsHook();
-    this.setupClickListener();
-    this.setupErrorBoundary();
-    this.setupOverlayUpdateListeners();
     this.setupMessageListener();
+  }
+
+  // PluginContext implementation
+  getComponent(element: HTMLElement): RenderedComponentData | undefined {
+    return this.componentMap.get(element);
+  }
+
+  getAllComponents(): Map<HTMLElement, RenderedComponentData> {
+    return this.componentMap;
+  }
+
+  registerComponent(element: HTMLElement, info: RenderedComponentData): void {
+    this.componentMap.set(element, info);
+  }
+
+  unregisterComponent(element: HTMLElement): void {
+    this.componentMap.delete(element);
+  }
+
+  sendMessage(message: ContentMessage): void {
+    notifyBackgroundScript(message);
+  }
+
+  getErrors(): ErrorData[] {
+    return this.errors;
+  }
+
+  addError(error: ErrorData): void {
+    this.errors.push(error);
+  }
+
+  getSelectedComponent(): RenderedComponentData | null {
+    return this.selectedComponentInfo;
+  }
+
+  setSelectedComponent(component: RenderedComponentData | null): void {
+    this.selectedComponentInfo = component;
   }
 
   private setupMessageListener() {
@@ -76,41 +110,15 @@ class ReactMCP {
     });
   }
 
-  private setupOverlayUpdateListeners() {
-    // Use requestAnimationFrame for scroll events (throttled automatically)
-    const updateOverlay = () => {
-      if (this.selectedElement && this.selectedOverlay) {
-        this.updateOverlayPosition();
-      }
-      this.rafId = null;
-    };
-
-    const scheduleUpdate = () => {
-      if (this.rafId === null) {
-        this.rafId = requestAnimationFrame(updateOverlay);
-      }
-    };
-
-    // Listen for scroll events (passive for better performance)
-    window.addEventListener("scroll", scheduleUpdate, {
-      passive: true,
-      capture: true,
-    });
-
-    // Use ResizeObserver for viewport resize
-    this.resizeObserver = new ResizeObserver(scheduleUpdate);
-    this.resizeObserver.observe(document.documentElement);
-  }
-
   private setupReactDevToolsHook() {
     let wrappedHook: any = null;
     let originalHook = (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__;
 
     Object.defineProperty(window, "__REACT_DEVTOOLS_GLOBAL_HOOK__", {
-      get() {
+      get: () => {
         return wrappedHook ?? originalHook;
       },
-      set(value) {
+      set: (value) => {
         originalHook = value;
         wrappedHook = wrap(value);
 
@@ -131,7 +139,8 @@ class ReactMCP {
             originalOnCommitFiberRoot.apply(hook, args);
           }
 
-          this.analyzeFiberTree(args[1]);
+          // Analyze fiber tree with componentMap as registry
+          this.fiberAnalyzer.analyze(args[1], this.componentMap);
         } catch (error) {
           console.error("[React MCP] Error analyzing fiber tree:", error);
         }
@@ -139,259 +148,13 @@ class ReactMCP {
     };
   }
 
-  private setupClickListener() {
-    document.addEventListener(
-      "click",
-      (e: MouseEvent) => {
-        // Check if Alt/Option key is pressed
-        if (!e.altKey) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        const target = e.target as HTMLElement;
-        const componentInfo = this.componentMap.get(target);
-
-        if (componentInfo) {
-          console.log("[React MCP] Component clicked:", componentInfo);
-
-          const data: RenderedComponentData = {
-            id: componentInfo.id,
-            name: componentInfo.name,
-            file: componentInfo.fiber._debugSource.fileName,
-            props: serializeData(componentInfo.props),
-            state: serializeData(componentInfo.state),
-          };
-
-          // Store selected component info
-          this.selectedComponentInfo = data;
-
-          notifyBackgroundScript({
-            type: "COMPONENT_CLICKED",
-            data,
-          });
-          this.highlightComponent(target);
-        }
-      },
-      true
-    );
-  }
-
-  private setupErrorBoundary() {
-    // Keep console.error interceptor as fallback for uncaught errors
-    const originalError = console.error;
-    console.error = (...args: any[]) => {
-      originalError.apply(console, args);
-
-      const errorMessage = args.join(" ");
-      if (
-        errorMessage.includes("React") ||
-        errorMessage.includes("component")
-      ) {
-        console.log("[React MCP] Console error detected:", errorMessage);
-
-        const data: ReactErrorData = {
-          message: errorMessage,
-          source: "console",
-        };
-
-        // Store error
-        this.errors.push(data);
-        if (this.errors.length > 100) {
-          this.errors = this.errors.slice(-100);
-        }
-
-        notifyBackgroundScript({
-          type: "REACT_ERROR",
-          data,
-        });
-      }
-    };
-  }
-
-  private analyzeFiberTree(fiberRoot?: { current: FiberNode } | null) {
-    if (fiberRoot == null || fiberRoot.current == null) return;
-
-    // React Fiber Flags (from ReactFiberFlags.js)
-    const Placement = 0b0000000000000010; // 2 - New node
-    const Update = 0b0000000000000100; // 4 - Props or state changed
-    const Deletion = 0b0000000000001000; // 8 - Node will be deleted
-
-    // Helper function to recursively remove deleted fiber and all descendants
-    const removeDeletedFiber = (fiber: FiberNode) => {
-      if (!fiber) return;
-
-      // Remove from maps if it has a DOM node
-      if (fiber.stateNode && fiber.stateNode instanceof HTMLElement) {
-        this.componentMap.delete(fiber.stateNode);
-        const overlay = this.errorOverlays.get(fiber.stateNode);
-        if (overlay) {
-          overlay.remove();
-          this.errorOverlays.delete(fiber.stateNode);
-        }
-      }
-
-      // Recursively remove all children
-      let child = fiber.child;
-      while (child) {
-        removeDeletedFiber(child);
-        child = child.sibling;
-      }
-    };
-
-    const traverse = (fiber: FiberNode) => {
-      if (!fiber) return;
-
-      // Handle deletions first - process deleted children and all their descendants
-      if (fiber.deletions && fiber.deletions.length > 0) {
-        console.log(
-          `[React MCP] Processing ${
-            fiber.deletions.length
-          } deletions in ${getComponentName(fiber)}`
-        );
-
-        fiber.deletions.forEach((deletedFiber: FiberNode) => {
-          removeDeletedFiber(deletedFiber);
-        });
-      }
-
-      // Process current fiber's flags
-      if (fiber.flags) {
-        if (fiber.flags & Placement) {
-          console.log(
-            `[React MCP] Component placed: ${getComponentName(fiber)}`
-          );
-          // Extract component info for new placement
-          if (fiber.stateNode && fiber.stateNode instanceof HTMLElement) {
-            const componentInfo: ComponentInfo = {
-              id: nanoid(),
-              name: getComponentName(fiber),
-              props: fiber.memoizedProps || {},
-              state: fiber.memoizedState || {},
-              fiber: fiber,
-              domNode: fiber.stateNode,
-            };
-            this.componentMap.set(fiber.stateNode, componentInfo);
-          }
-        }
-
-        if (fiber.flags & Update) {
-          console.log(
-            `[React MCP] Component updated: ${getComponentName(fiber)}`
-          );
-          // Update component info
-          if (fiber.stateNode && fiber.stateNode instanceof HTMLElement) {
-            const existingInfo =
-              fiber.stateNode != null
-                ? this.componentMap.get(fiber.stateNode as HTMLElement)
-                : null;
-
-            const componentInfo: ComponentInfo = {
-              id: existingInfo?.id || nanoid(),
-              name: getComponentName(fiber),
-              props: fiber.memoizedProps || {},
-              state: fiber.memoizedState || {},
-              fiber: fiber,
-              domNode: fiber.stateNode,
-            };
-            this.componentMap.set(fiber.stateNode, componentInfo);
-          }
-        }
-
-        if (fiber.flags & Deletion) {
-          console.log(
-            `[React MCP] Component marked for deletion: ${getComponentName(
-              fiber
-            )}`
-          );
-          // This fiber will be deleted, don't process further
-          return;
-        }
-      }
-
-      // Extract/update component info if not already handled by flags
-      if (
-        fiber.stateNode &&
-        fiber.stateNode instanceof HTMLElement &&
-        !this.componentMap.has(fiber.stateNode)
-      ) {
-        const componentInfo: ComponentInfo = {
-          id: nanoid(),
-          name: getComponentName(fiber),
-          props: fiber.memoizedProps || {},
-          state: fiber.memoizedState || {},
-          fiber: fiber,
-          domNode: fiber.stateNode,
-        };
-        this.componentMap.set(fiber.stateNode, componentInfo);
-      }
-
-      // Only traverse children if subtreeFlags indicates there are changes in subtree
-      // or if this is the initial traversal (no flags set yet)
-      if (fiber.subtreeFlags | 0) {
-        let child = fiber.child;
-        while (child) {
-          traverse(child);
-          child = child.sibling;
-        }
-      }
-    };
-
-    traverse(fiberRoot.current);
-  }
-
-  private highlightComponent(domNode: HTMLElement) {
-    // Store reference to selected element
-    this.selectedElement = domNode;
-
-    // Create overlay if it doesn't exist
-    if (this.selectedOverlay == null) {
-      const overlay = document.createElement("div");
-      overlay.style.position = "fixed";
-      overlay.style.backgroundColor = "rgba(255, 165, 0, 0.3)"; // Semi-transparent orange
-      overlay.style.border = "2px solid orange";
-      overlay.style.zIndex = "9999";
-      overlay.style.pointerEvents = "none"; // Allow clicks to pass through
-      overlay.style.transition = "none"; // Disable transitions for smooth updates
-
-      document.body.appendChild(overlay);
-      this.selectedOverlay = overlay;
-    }
-
-    // Update position
-    this.updateOverlayPosition();
-  }
-
-  private updateOverlayPosition() {
-    if (!this.selectedElement || !this.selectedOverlay) return;
-
-    const rect = this.selectedElement.getBoundingClientRect();
-
-    // Update overlay position and size
-    this.selectedOverlay.style.top = `${rect.top}px`;
-    this.selectedOverlay.style.left = `${rect.left}px`;
-    this.selectedOverlay.style.width = `${rect.width}px`;
-    this.selectedOverlay.style.height = `${rect.height}px`;
-  }
-
   private sendStateForHandshake() {
     // Collect all component data
     console.log("[React MCP] Preparing state for handshake...");
-    const components: RenderedComponentData[] = [];
-    this.componentMap.forEach((info) => {
-      if (info.fiber._debugSource) {
-        components.push({
-          id: info.id,
-          name: info.name,
-          file: info.fiber._debugSource.fileName,
-          props: serializeData(info.props),
-          state: serializeData(info.state),
-        });
-      }
-    });
+    const components = this.getAllComponents();
 
     console.log("[React MCP] Sending state for handshake:", {
-      componentsCount: components.length,
+      componentsCount: components.size,
       errorsCount: this.errors.length,
       hasSelectedComponent: this.selectedComponentInfo != null,
     });
@@ -399,10 +162,20 @@ class ReactMCP {
     notifyBackgroundScript({
       type: "STATE_FOR_HANDSHAKE",
       data: {
-        components,
+        components: Array.from(components.values()),
         errors: this.errors,
         selectedComponent: this.selectedComponentInfo,
       },
+    });
+  }
+
+  destroy() {
+    // Cleanup all plugins
+    this.plugins.forEach((plugin) => {
+      if (plugin.destroy) {
+        console.log(`[React MCP] Destroying plugin: ${plugin.name}`);
+        plugin.destroy();
+      }
     });
   }
 }

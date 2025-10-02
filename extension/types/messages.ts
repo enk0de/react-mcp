@@ -17,14 +17,26 @@ const RenderedComponentDataSchema = z.object({
   state: z.record(z.any(), z.any()),
 });
 
-const ReactErrorDataSchema = z.object({
+const ErrorDataSchema = z.object({
+  id: z.string(),
   message: z.string(),
-  componentName: z.string().optional(),
-  source: z.enum(["console", "fiber"]),
+  stack: z.string(),
+  componentName: z.string(),
+  type: z.enum([
+    "runtime_error",
+    "unhandled_rejection",
+    "console_error",
+    "console_warning",
+    "react_error",
+  ]),
+  timestamp: z.number(),
+  file: z.string().optional(),
+  line: z.number().optional(),
+  column: z.number().optional(),
 });
 
 export type RenderedComponentData = z.infer<typeof RenderedComponentDataSchema>;
-export type ReactErrorData = z.infer<typeof ReactErrorDataSchema>;
+export type ErrorData = z.infer<typeof ErrorDataSchema>;
 
 // ============================================================================
 // Content Script → Background Script Messages
@@ -45,13 +57,21 @@ const ContentMessageSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("REACT_ERROR"),
-    data: ReactErrorDataSchema,
+    data: ErrorDataSchema,
+  }),
+  z.object({
+    type: z.literal("JS_ERROR"),
+    data: ErrorDataSchema,
+  }),
+  z.object({
+    type: z.literal("JS_WARNING"),
+    data: ErrorDataSchema,
   }),
   z.object({
     type: z.literal("STATE_FOR_HANDSHAKE"),
     data: z.object({
       components: z.array(RenderedComponentDataSchema),
-      errors: z.array(ReactErrorDataSchema),
+      errors: z.array(ErrorDataSchema),
       selectedComponent: RenderedComponentDataSchema.nullable(),
     }),
   }),
@@ -114,7 +134,7 @@ const WebSocketMessageSchema = z.discriminatedUnion("type", [
     data: z.object({
       tabId: z.number(),
       components: z.array(RenderedComponentDataSchema),
-      errors: z.array(ReactErrorDataSchema),
+      errors: z.array(ErrorDataSchema),
       selectedComponent: RenderedComponentDataSchema.nullable(),
     }),
   }),
@@ -144,8 +164,8 @@ const WebSocketMessageSchema = z.discriminatedUnion("type", [
     }),
   }),
   z.object({
-    type: z.literal("REACT_ERROR"),
-    data: ReactErrorDataSchema.extend({
+    type: z.literal("ERROR"),
+    data: ErrorDataSchema.extend({
       tabId: z.number(),
     }),
   }),

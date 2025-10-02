@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import Counter from './components/Counter';
-import UserCard from './components/UserCard';
-import './App.css';
+import { ErrorBoundary, Suspense } from "@suspensive/react";
+import { useState } from "react";
+import "./App.css";
+import Counter from "./components/Counter";
+import UserCard from "./components/UserCard";
 
 function App() {
   const [showError, setShowError] = useState(false);
 
   if (showError) {
-    throw new Error('Test React Error!');
+    throw new Error("Test React Error!");
   }
 
   return (
@@ -26,21 +27,29 @@ function App() {
         <section className="section">
           <h2>User Cards</h2>
           <div className="card-grid">
-            <UserCard name="Alice" role="Developer" />
-            <UserCard name="Bob" role="Designer" />
+            <UserCard name="Alice" role="Developer" />{" "}
+            <ErrorBoundary
+              fallback={(props) => (
+                <>
+                  <button onClick={props.reset}>Try again</button>
+                  {props.error.message}
+                </>
+              )}
+            >
+              <Suspense>
+                <UserCard name="Bob" role="Designer" />
+              </Suspense>
+            </ErrorBoundary>
             <UserCard name="Charlie" role="Manager" />
           </div>
         </section>
 
         <section className="section">
           <h2>Test Error Boundary</h2>
-          <button
-            className="error-button"
-            onClick={() => setShowError(true)}
-          >
+          <button className="error-button" onClick={() => setShowError(true)}>
             Trigger Error
           </button>
-          <p style={{ fontSize: '14px', color: '#666' }}>
+          <p style={{ fontSize: "14px", color: "#666" }}>
             Click to test error detection and overlay
           </p>
         </section>
@@ -48,7 +57,9 @@ function App() {
         <section className="section">
           <h2>Instructions</h2>
           <ul className="instructions">
-            <li>Hold <kbd>Alt/Option</kbd> and click any component to inspect it</li>
+            <li>
+              Hold <kbd>Alt/Option</kbd> and click any component to inspect it
+            </li>
             <li>Component information will be sent to the MCP server</li>
             <li>Check console for React MCP extension logs</li>
             <li>Errors will show a red ! icon overlay</li>

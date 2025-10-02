@@ -6,5 +6,6 @@ export interface FiberNode {
   _debugSource: {
     fileName: string;
   };
+  memoizedState: { [key: string]: any } | null;
   [key: string]: any;
 }

@@ -9,7 +9,7 @@ function Counter() {
       <div className="button-group">
         <button onClick={() => setCount(count - 1)}>-</button>
         <button className="reset-button" onClick={() => setCount(0)}>Reset</button>
-        <button onClick={() => setCount(count + 1)}>플러스</button>
+        <button onClick={() => setCount(count + 1)}>+</button>
       </div>
     </div>
   );
