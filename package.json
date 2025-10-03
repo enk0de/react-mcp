@@ -2,7 +2,6 @@
   "name": "react-mcp",
   "version": "1.0.0",
   "description": "MCP server with browser extension for React development",
-  "private": true,
   "scripts": {
     "build": "pnpm -r build",
     "build:extension": "pnpm --filter @react-mcp/extension build",
@@ -14,7 +13,11 @@
     "start:mcp": "pnpm --filter @react-mcp/server start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["mcp", "react", "browser-extension"],
+  "keywords": [
+    "mcp",
+    "react",
+    "browser-extension"
+  ],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.16.1",
