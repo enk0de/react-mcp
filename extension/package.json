@@ -1,6 +1,6 @@
 {
   "name": "@react-mcp/extension",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Browser extension for React MCP",
   "type": "module",
   "scripts": {
