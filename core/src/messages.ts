@@ -20,7 +20,7 @@ const RenderedComponentDataSchema = z.object({
 export type RenderedComponentData = z.infer<typeof RenderedComponentDataSchema>;
 
 // ============================================================================
-// Content Script → Background Script Messages
+// Content Script → Background Script (Or Just Bridge) Messages
 // ============================================================================
 
 const ContentMessageSchema = z.discriminatedUnion("type", [
@@ -42,6 +42,10 @@ const ContentMessageSchema = z.discriminatedUnion("type", [
       components: z.array(RenderedComponentDataSchema),
       selectedComponent: RenderedComponentDataSchema.nullable(),
     }),
+  }),
+  z.object({
+    type: z.literal("OPEN_SETTINGS_POPUP"),
+    data: z.undefined().optional(),
   }),
 ]);
 

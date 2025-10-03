@@ -1,5 +1,5 @@
+import { ContentMessage, RenderedComponentData } from "@react-mcp/core";
 import type { FiberNode } from "./fiber-node";
-import type { ContentMessage, RenderedComponentData } from "./messages";
 
 /**
  * Plugin context provides access to ReactMCP state and methods

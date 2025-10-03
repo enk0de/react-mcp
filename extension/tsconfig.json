@@ -4,7 +4,6 @@
     "target": "ES2020",
     "lib": ["ES2020", "DOM"],
     "types": ["chrome"],
-    "jsx": "preserve"
-  },
-  "include": ["entrypoints/**/*", "**/*.ts", ".wxt/wxt.d.ts"]
+    "jsx": "react-jsx"
+  }
 }

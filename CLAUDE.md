@@ -11,13 +11,14 @@ react-mcp is an MCP (Model Context Protocol) server integrated with a browser ex
 The project consists of two main components:
 
 1. **Browser Extension** (`extension/`): Chrome/Firefox extension that injects into React dev environments
+
    - Parses React component tree using React DevTools hooks
    - Detects component errors and warnings
    - Displays UI overlays on error components
    - Communicates with MCP Server via WebSocket
 
 2. **MCP Server** (`mcp-server/`): Dual-protocol server
-   - **WebSocket API** (port 3939): Real-time bidirectional communication with browser extension
+   - **WebSocket API**: Real-time bidirectional communication with browser extension
      - Receives messages: `REACT_DETECTED`, `COMPONENT_CLICKED`, `REACT_ERROR`
      - Sends acknowledgments and responses
      - Auto-reconnection support
@@ -41,6 +42,7 @@ Browser (React App)
 ## Coding Principles
 
 ### Comments
+
 - Write comments only for core logic and complex algorithms
 - Avoid excessive or unnecessary comments
 - Let the code be self-documenting where possible
@@ -52,23 +54,28 @@ This project uses **pnpm** (v10.16.1). Always use `pnpm` commands.
 ## Development Commands
 
 ### Building
+
 - `pnpm build` - Build all packages
 - `pnpm build:extension` - Build browser extension only (production build with WXT)
 - `pnpm build:mcp` - Build MCP server only
 
 ### Running
-- `pnpm start:mcp` - Start MCP server (WebSocket on port 3939, MCP on stdio)
+
+- `pnpm start:mcp` - Start MCP server (WebSocket, MCP on stdio)
 - `pnpm dev:extension` - Start WXT dev server with hot reload (opens browser automatically)
 - `pnpm dev:mcp` - Watch and rebuild MCP server on changes
 
 ### Extension Development (WXT)
+
 The extension uses WXT (Web Extension Tools) for modern development experience:
+
 - Hot module reload in development mode
 - TypeScript support out of the box
 - Automatic manifest generation
 - Multi-browser support (Chrome, Firefox, etc.)
 
 ### Testing
+
 - `pnpm test` - Run all tests
 
 ## Installation & Setup
@@ -122,6 +129,7 @@ The extension uses WXT (Web Extension Tools) for modern development experience:
 ## Test App
 
 The `test-app/` directory contains a sample React application for testing the extension:
+
 - **Counter**: Simple state management example
 - **User Cards**: Multiple component instances
 - **Error Testing**: Button to trigger React errors and test error detection

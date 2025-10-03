@@ -1,7 +1,8 @@
-import { nanoid } from "nanoid";
 import type { RenderedComponentData } from "@react-mcp/core";
+import { nanoid } from "nanoid";
 import type { FiberNode } from "../types/fiber-node";
 import { getComponentName } from "../utils/get-component-name";
+import { serialize } from "../utils/serialize";
 
 export interface ComponentRegistry {
   get(element: HTMLElement): RenderedComponentData | undefined;
@@ -164,7 +165,7 @@ function transformFiber(fiber: FiberNode): RenderedComponentData | null {
     id: nanoid(),
     name: getComponentName(fiber),
     file: fiber._debugSource?.fileName || "unknown",
-    props: fiber.memoizedProps || {},
-    state: fiber.memoizedState || {},
+    props: serialize(fiber.memoizedProps) || {},
+    state: serialize(fiber.memoizedState) || {},
   };
 }

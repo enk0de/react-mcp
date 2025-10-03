@@ -2,8 +2,8 @@
 
 import type { ContentMessage, RenderedComponentData } from "@react-mcp/core";
 import { FiberAnalyzer } from "../libs/fiber-analyzer";
+import { OverlayManager } from "../libs/overlay-manager";
 import { ComponentInspectorPlugin } from "../plugins/component-inspector-plugin";
-import { GuideOverlayPlugin } from "../plugins/guide-overlay-plugin";
 import type { Plugin, PluginContext } from "../types/plugin";
 
 /**
@@ -28,14 +28,13 @@ class ReactMCP implements PluginContext {
 
   private plugins: Plugin[] = [];
   private fiberAnalyzer: FiberAnalyzer;
+  private overlayManager: OverlayManager;
 
   constructor() {
     this.fiberAnalyzer = new FiberAnalyzer();
+    this.overlayManager = new OverlayManager(this);
 
-    this.plugins = [
-      new ComponentInspectorPlugin(this),
-      new GuideOverlayPlugin(this),
-    ];
+    this.plugins = [new ComponentInspectorPlugin(this)];
   }
 
   init() {
@@ -43,6 +42,8 @@ class ReactMCP implements PluginContext {
       console.log(`[React MCP] Initializing plugin: ${plugin.name}`);
       plugin.init();
     });
+
+    this.overlayManager.init();
 
     this.setupReactDevToolsHook();
     this.setupMessageListener();

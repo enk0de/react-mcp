@@ -9,62 +9,46 @@ export class GuideOverlay {
 
   constructor() {}
 
-  create() {
-    const create = () => {
-      const container = document.createElement("div");
-      container.style.position = "fixed";
-      container.style.right = "16px";
-      container.style.bottom = "16px";
-      container.style.zIndex = "99999";
-      container.style.display = "flex";
-      container.style.flexDirection = "column";
-      container.style.alignItems = "center";
-      container.style.justifyContent = "center";
-      container.style.gap = "8px";
-      container.style.backgroundColor = "rgba(23, 23, 23, 0.9)";
-      container.style.borderRadius = "12px";
-      container.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.25)";
-      container.style.width = "40px";
-      container.style.height = "40px";
-      container.style.color = "#ffffff";
-      container.style.fontFamily =
-        "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-      container.style.fontSize = "13px";
-      container.style.lineHeight = "1.4";
-      container.style.pointerEvents = "auto";
-      container.style.textOverflow = "clip";
-      container.style.overflow = "hidden";
-      container.style.whiteSpace = "nowrap";
-      container.textContent = "?";
-      // "Press Alt and Click a rendered component to notify MCP Server.";
+  create(parent: HTMLElement) {
+    const container = document.createElement("div");
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.alignItems = "center";
+    container.style.justifyContent = "center";
+    container.style.gap = "8px";
+    container.style.backgroundColor = "rgba(23, 23, 23, 0.9)";
+    container.style.borderRadius = "12px";
+    container.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.25)";
+    container.style.width = "40px";
+    container.style.height = "40px";
+    container.style.color = "#ffffff";
+    container.style.fontFamily =
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    container.style.fontSize = "13px";
+    container.style.lineHeight = "1.4";
+    container.style.pointerEvents = "auto";
+    container.style.textOverflow = "clip";
+    container.style.overflow = "hidden";
+    container.style.whiteSpace = "nowrap";
+    container.textContent = "?";
 
-      container.setAttribute("aria-label", "Open React MCP Guide");
-      container.addEventListener(
-        "click",
-        (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          this.show();
-        },
-        {
-          signal: this.abortController.signal,
-        }
-      );
+    container.setAttribute("aria-label", "Open React MCP Guide");
+    container.addEventListener(
+      "click",
+      (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.show();
+      },
+      {
+        signal: this.abortController.signal,
+      }
+    );
 
-      document.body.appendChild(container);
+    parent.appendChild(container);
 
-      this.container = container;
-      this.show();
-    };
-
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", create, {
-        once: true,
-        passive: true,
-      });
-    } else {
-      create();
-    }
+    this.container = container;
+    this.show();
   }
 
   show() {

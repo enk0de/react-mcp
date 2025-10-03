@@ -4,20 +4,30 @@
   "description": "Browser extension for React MCP",
   "type": "module",
   "scripts": {
-    "build": "wxt build",
-    "build:firefox": "wxt build -b firefox",
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "zip": "wxt zip"
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "compile": "tsc --noEmit",
+    "postinstall": "wxt prepare"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.14",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "vite": "^7.1.9",
     "wxt": "^0.20.11"
   },
   "dependencies": {
     "@react-mcp/core": "workspace:*",
+    "@webext-core/messaging": "^2.3.0",
+    "@wxt-dev/module-react": "^1.1.5",
     "motion": "^12.23.22",
     "nanoid": "^5.1.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "zod": "^4.1.11"
   }
 }

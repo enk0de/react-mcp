@@ -4,10 +4,11 @@ import {
   type ContentMessage,
   type MCPServerMessage,
   parseWebSocketMessage,
-  safeParseContentMessage,
   safeParseMCPServerMessage,
   type WebSocketMessage,
 } from "@react-mcp/core";
+import { onMessage, sendMessage } from "../libs/messaging";
+import { PortStorage } from "../libs/storage/port";
 
 /**
  * Background service worker that communicates with MCP server via WebSocket
@@ -19,10 +20,10 @@ export default defineBackground({
   },
 });
 
-const mcpServerUrl = "ws://localhost:3939";
 let ws: WebSocket | null = null;
 let isConnected = false;
 let reconnectTimer: number | null = null;
+const portManager = new PortStorage();
 
 // Handshake state per tab
 const handshakeState = new Map<
@@ -45,24 +46,20 @@ function init() {
   // Connect to WebSocket
   connectWebSocket();
 
+  // Listen for port changes and reconnect
+  portManager.watch((oldPort, newPort) => {
+    console.log(
+      `[React MCP Background] Port changed from ${oldPort} to ${newPort}, reconnecting...`
+    );
+    disconnectWebSocket();
+    connectWebSocket();
+  });
+
   // Listen for messages from content scripts
-  chrome.runtime.onMessage.addListener(
-    (message: unknown, sender, sendResponse) => {
-      console.log("[React MCP Background] Received message:", message);
-
-      const parsed = safeParseContentMessage(message);
-      if (!parsed.success) {
-        console.error(
-          "[React MCP Background] Invalid message format:",
-          parsed.error
-        );
-        return false; // Don't keep channel open
-      }
-
-      handleContentMessage(parsed.data, sender);
-      return false; // Don't keep channel open for async response
-    }
-  );
+  onMessage("contentToBackground", ({ data, sender }) => {
+    console.log("[React MCP Background] Received message:", data);
+    handleContentMessage(data, sender);
+  });
 
   // Listen for extension icon clicks
   chrome.action.onClicked.addListener((tab) => {
@@ -72,9 +69,28 @@ function init() {
   console.log("[React MCP Background] Initialization complete");
 }
 
-function connectWebSocket() {
+function disconnectWebSocket() {
+  if (ws) {
+    console.log("[React MCP Background] Disconnecting WebSocket...");
+    ws.close();
+    ws = null;
+    isConnected = false;
+  }
+
+  // Clear all handshake states
+  handshakeState.forEach((state, tabId) => {
+    stopPingInterval(tabId);
+  });
+  handshakeState.clear();
+}
+
+async function connectWebSocket() {
   try {
-    console.log("[React MCP Background] Connecting to WebSocket...");
+    const port = await portManager.get();
+    const mcpServerUrl = `ws://localhost:${port}`;
+    console.log(
+      `[React MCP Background] Connecting to WebSocket at ${mcpServerUrl}...`
+    );
     ws = new WebSocket(mcpServerUrl);
 
     ws.onopen = () => {
@@ -293,13 +309,11 @@ function attemptHandshake(tabId: number) {
   stopPingInterval(tabId);
 
   // Request state from content script for handshake
-  chrome.tabs
-    .sendMessage(tabId, { type: "REQUEST_STATE_FOR_HANDSHAKE" })
-    .catch(() => {
-      console.log(
-        "[React MCP Background] Failed to request state for handshake"
-      );
-    });
+  sendMessage(
+    "backgroundToContent",
+    { type: "REQUEST_STATE_FOR_HANDSHAKE" },
+    tabId
+  );
 }
 
 function handleContentMessage(
@@ -319,16 +333,22 @@ function handleContentMessage(
     return;
   }
 
+  // Handle OPEN_SETTINGS_POPUP
+  if (message.type === "OPEN_SETTINGS_POPUP") {
+    chrome.action.openPopup().catch((error) => {
+      console.error("[React MCP Background] Failed to open popup:", error);
+    });
+    return;
+  }
+
   // If REACT_DETECTED, request state for handshake
   if (message.type === "REACT_DETECTED") {
     // Request state from content script for handshake
-    chrome.tabs
-      .sendMessage(tabId, { type: "REQUEST_STATE_FOR_HANDSHAKE" })
-      .catch(() => {
-        console.log(
-          "[React MCP Background] Failed to request state for handshake"
-        );
-      });
+    sendMessage(
+      "backgroundToContent",
+      { type: "REQUEST_STATE_FOR_HANDSHAKE" },
+      tabId
+    );
     return;
   }
 
@@ -340,14 +360,7 @@ function handleIconClick(tab: chrome.tabs.Tab) {
 
   // Send message to content script to toggle features
   if (tab.id) {
-    chrome.tabs
-      .sendMessage(tab.id, { type: "TOGGLE_FEATURES" })
-      .catch((error) => {
-        console.error(
-          "[React MCP Background] Error sending message to content script:",
-          error
-        );
-      });
+    sendMessage("backgroundToContent", { type: "TOGGLE_FEATURES" }, tab.id);
   }
 }
 

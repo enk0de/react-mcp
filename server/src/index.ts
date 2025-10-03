@@ -12,11 +12,13 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
+  DEFAULT_PORT,
   type WebSocketMessage,
   safeParseWebSocketMessage,
 } from "@react-mcp/core";
 import { WebSocket, WebSocketServer } from "ws";
 import packageJson from "../package.json" with { type: "json" };
+import { parsePort } from "./cli.js";
 import { ComponentState } from "./interfaces.js";
 import { createWebSocketServer } from "./socket.js";
 
@@ -64,8 +66,8 @@ class ReactMCPServer {
     );
   }
 
-  async init() {
-    this.wss = await createWebSocketServer({ port: 3939 });
+  async init(port: number = DEFAULT_PORT) {
+    this.wss = await createWebSocketServer({ port });
 
     this.setupWebSocket();
     this.setupMCPHandlers();
@@ -151,7 +153,7 @@ class ReactMCPServer {
       ws.send(JSON.stringify({ type: "connected", timestamp: Date.now() }));
     });
 
-    console.error(`[MCP Server] WebSocket server listening on port 3939`);
+    console.error(`[MCP Server] WebSocket server listening on port ${this.wss.options.port}`);
   }
 
   private handleWebSocketMessage(ws: WebSocket, message: WebSocketMessage) {
@@ -569,7 +571,9 @@ class ReactMCPServer {
 }
 
 const server = new ReactMCPServer();
-server.init().catch((error) => {
+const port = parsePort();
+
+server.init(port).catch((error) => {
   console.error("[MCP Server] Failed to start:", error);
   process.exit(1);
 });
