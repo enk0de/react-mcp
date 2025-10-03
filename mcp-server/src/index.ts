@@ -11,12 +11,12 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { WebSocket, WebSocketServer } from "ws";
-import { ComponentError, ComponentState } from "./interfaces.js";
 import {
   type WebSocketMessage,
   safeParseWebSocketMessage,
-} from "./messages.js";
+} from "@react-mcp/core";
+import { WebSocket, WebSocketServer } from "ws";
+import { ComponentState } from "./interfaces.js";
 import { createWebSocketServer } from "./socket.js";
 
 class ReactMCPServer {
@@ -26,7 +26,6 @@ class ReactMCPServer {
   private selectedComponentId: string | null = null;
   private components: Map<string, ComponentState> = new Map();
 
-  private errors: ComponentError[] = [];
   private _wss: WebSocketServer | null = null;
 
   // Current active tab tracking
@@ -98,7 +97,6 @@ class ReactMCPServer {
     this.lastHandshake = null;
     this.lastPing = null;
     this.components.clear();
-    this.errors = [];
     this.selectedComponentId = null;
   }
 
@@ -158,27 +156,23 @@ class ReactMCPServer {
 
     switch (message.type) {
       case "HANDSHAKE": {
-        const { tabId, components, errors, selectedComponent } = message.data;
+        const { tabId, components, selectedComponent } = message.data;
 
         // If this is a different tab, clear existing state
         if (this.activeTabId !== null && this.activeTabId !== tabId) {
-          console.error(
-            "[MCP Server] Switching to new tab, clearing old state"
-          );
+          console.log("[MCP Server] Switching to new tab, clearing old state");
           this.components.clear();
-          this.errors = [];
           this.selectedComponentId = null;
         }
 
         this.activeTabId = tabId;
         this.lastHandshake = Date.now();
         this.lastPing = Date.now(); // Initialize lastPing on handshake
-        console.error("[MCP Server] Handshake successful with tab:", tabId);
+        console.log("[MCP Server] Handshake successful with tab:", tabId);
 
         // Sync state from HANDSHAKE
         console.log("[MCP Server] Syncing state from HANDSHAKE:", {
           componentsCount: components.length,
-          errorsCount: errors.length,
           hasSelectedComponent: selectedComponent != null,
         });
 
@@ -200,20 +194,6 @@ class ReactMCPServer {
         if (selectedComponent != null) {
           const selectedId = `${selectedComponent.name};${tabId}`;
           this.selectedComponentId = selectedId;
-        }
-
-        // Sync errors
-        errors.forEach((err) => {
-          this.errors.push({
-            componentName: err.componentName || "Unknown",
-            message: err.message,
-            timestamp: Date.now(),
-          });
-        });
-
-        // Keep only last 100 errors
-        if (this.errors.length > 100) {
-          this.errors = this.errors.slice(-100);
         }
 
         // Send handshake acknowledgment
@@ -264,27 +244,6 @@ class ReactMCPServer {
         ws.send(
           JSON.stringify({ type: "ack", success: true, componentId: id })
         );
-        break;
-      }
-
-      case "ERROR": {
-        const { message: errorMessage, componentName, source } = message.data;
-        this.errors.push({
-          componentName: componentName || "Unknown",
-          message: errorMessage,
-          timestamp: Date.now(),
-        });
-
-        // Keep only last 100 errors
-        if (this.errors.length > 100) {
-          this.errors = this.errors.slice(-100);
-        }
-        console.error("[MCP Server] React error:", {
-          componentName,
-          message: errorMessage,
-          source,
-        });
-        ws.send(JSON.stringify({ type: "ack", success: true }));
         break;
       }
 
@@ -415,14 +374,6 @@ class ReactMCPServer {
             },
           },
           {
-            name: "list_errors",
-            description: "List all React errors detected in the browser",
-            inputSchema: {
-              type: "object",
-              properties: {},
-            },
-          },
-          {
             name: "analyze_component",
             description: "Analyze a React component and provide insights",
             inputSchema: {
@@ -526,17 +477,6 @@ class ReactMCPServer {
               {
                 type: "json",
                 text: JSON.stringify(componentsArray, null, 2),
-              },
-            ],
-          };
-        }
-
-        case "list_errors": {
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(this.errors, null, 2),
               },
             ],
           };

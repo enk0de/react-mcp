@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
+import type { RenderedComponentData } from "@react-mcp/core";
 import type { FiberNode } from "../types/fiber-node";
-import { RenderedComponentData } from "../types/messages";
 import { getComponentName } from "../utils/get-component-name";
 
 export interface ComponentRegistry {

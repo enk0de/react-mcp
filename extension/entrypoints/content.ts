@@ -1,14 +1,9 @@
 /// <reference path="../.wxt/wxt.d.ts" />
 
+import type { ContentMessage, RenderedComponentData } from "@react-mcp/core";
 import { FiberAnalyzer } from "../libs/fiber-analyzer";
 import { ComponentInspectorPlugin } from "../plugins/component-inspector-plugin";
-import { ErrorCapturePlugin } from "../plugins/error-capture-plugin";
 import { GuideOverlayPlugin } from "../plugins/guide-overlay-plugin";
-import type {
-  ContentMessage,
-  ErrorData,
-  RenderedComponentData,
-} from "../types/messages";
 import type { Plugin, PluginContext } from "../types/plugin";
 
 /**
@@ -29,26 +24,21 @@ export default defineContentScript({
 class ReactMCP implements PluginContext {
   private componentMap = new Map<HTMLElement, RenderedComponentData>();
   private selectedComponentInfo: RenderedComponentData | null = null;
-  private errors: ErrorData[] = [];
   private isReactDetected = false;
 
   private plugins: Plugin[] = [];
   private fiberAnalyzer: FiberAnalyzer;
 
   constructor() {
-    // Initialize FiberAnalyzer
     this.fiberAnalyzer = new FiberAnalyzer();
 
-    // Register plugins with context
     this.plugins = [
-      new ErrorCapturePlugin(this),
       new ComponentInspectorPlugin(this),
       new GuideOverlayPlugin(this),
     ];
   }
 
   init() {
-    // Initialize all plugins
     this.plugins.forEach((plugin) => {
       console.log(`[React MCP] Initializing plugin: ${plugin.name}`);
       plugin.init();
@@ -77,14 +67,6 @@ class ReactMCP implements PluginContext {
 
   sendMessage(message: ContentMessage): void {
     notifyBackgroundScript(message);
-  }
-
-  getErrors(): ErrorData[] {
-    return this.errors;
-  }
-
-  addError(error: ErrorData): void {
-    this.errors.push(error);
   }
 
   getSelectedComponent(): RenderedComponentData | null {
@@ -155,7 +137,6 @@ class ReactMCP implements PluginContext {
 
     console.log("[React MCP] Sending state for handshake:", {
       componentsCount: components.size,
-      errorsCount: this.errors.length,
       hasSelectedComponent: this.selectedComponentInfo != null,
     });
 
@@ -163,14 +144,12 @@ class ReactMCP implements PluginContext {
       type: "STATE_FOR_HANDSHAKE",
       data: {
         components: Array.from(components.values()),
-        errors: this.errors,
         selectedComponent: this.selectedComponentInfo,
       },
     });
   }
 
   destroy() {
-    // Cleanup all plugins
     this.plugins.forEach((plugin) => {
       if (plugin.destroy) {
         console.log(`[React MCP] Destroying plugin: ${plugin.name}`);

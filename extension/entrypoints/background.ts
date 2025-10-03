@@ -7,7 +7,7 @@ import {
   safeParseContentMessage,
   safeParseMCPServerMessage,
   type WebSocketMessage,
-} from "../types/messages";
+} from "@react-mcp/core";
 
 /**
  * Background service worker that communicates with MCP server via WebSocket
@@ -368,15 +368,6 @@ function createWebSocketMessage(
     case "COMPONENT_CLICKED":
       return {
         type: "COMPONENT_CLICKED",
-        data: {
-          ...message.data,
-          tabId,
-        },
-      };
-
-    case "ERROR":
-      return {
-        type: "ERROR",
         data: {
           ...message.data,
           tabId,

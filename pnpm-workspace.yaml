@@ -1,4 +1,5 @@
 packages:
+  - core
   - extension
   - mcp-server
   - test-app

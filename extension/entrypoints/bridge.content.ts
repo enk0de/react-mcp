@@ -1,6 +1,6 @@
 /// <reference path="../.wxt/wxt.d.ts" />
 
-import { safeParseBackgroundMessage } from "../types/messages";
+import { safeParseBackgroundMessage } from "@react-mcp/core";
 
 /**
  * Content script bridge (ISOLATED world)

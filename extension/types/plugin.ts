@@ -1,9 +1,5 @@
 import type { FiberNode } from "./fiber-node";
-import type {
-  ContentMessage,
-  ErrorData,
-  RenderedComponentData,
-} from "./messages";
+import type { ContentMessage, RenderedComponentData } from "./messages";
 
 /**
  * Plugin context provides access to ReactMCP state and methods
@@ -33,16 +29,6 @@ export interface PluginContext {
    * Send message to background script
    */
   sendMessage(message: ContentMessage): void;
-
-  /**
-   * Get current errors
-   */
-  getErrors(): ErrorData[];
-
-  /**
-   * Add an error
-   */
-  addError(error: ErrorData): void;
 
   /**
    * Get selected component

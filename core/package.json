@@ -1,0 +1,17 @@
+{
+  "name": "@react-mcp/core",
+  "version": "1.0.0",
+  "description": "Shared types and schemas for React MCP",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
