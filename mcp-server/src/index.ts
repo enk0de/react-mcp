@@ -16,8 +16,11 @@ import {
   safeParseWebSocketMessage,
 } from "@react-mcp/core";
 import { WebSocket, WebSocketServer } from "ws";
+import packageJson from "../package.json" with { type: "json" };
 import { ComponentState } from "./interfaces.js";
 import { createWebSocketServer } from "./socket.js";
+
+const { version } = packageJson;
 
 class ReactMCPServer {
   private mcpServer: Server;
@@ -51,7 +54,7 @@ class ReactMCPServer {
     this.mcpServer = new Server(
       {
         name: "react-mcp-server",
-        version: "1.0.0",
+        version,
       },
       {
         capabilities: {
