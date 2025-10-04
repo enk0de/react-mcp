@@ -377,21 +377,7 @@ class ReactMCPServer {
                 required: ["id", "name", "url", "timestamp", "props", "state"],
               },
             },
-          },
-          {
-            name: "analyze_component",
-            description: "Analyze a React component and provide insights",
-            inputSchema: {
-              type: "object",
-              properties: {
-                componentId: {
-                  type: "string",
-                  description: "The ID of the component to analyze",
-                },
-              },
-              required: ["componentId"],
-            },
-          },
+          }
         ],
       };
     });
@@ -482,60 +468,6 @@ class ReactMCPServer {
               {
                 type: "json",
                 text: JSON.stringify(componentsArray, null, 2),
-              },
-            ],
-          };
-        }
-
-        case "analyze_component": {
-          const componentId = args?.componentId as string;
-          const component = this.components.get(componentId);
-
-          if (!component) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `Component not found: ${componentId}`,
-                },
-              ],
-              isError: true,
-            };
-          }
-
-          // Perform basic analysis
-          const analysis: {
-            name: string;
-            propCount: number;
-            stateCount: number;
-            props: Record<string, any>;
-            state: Record<string, any>;
-            suggestions: string[];
-          } = {
-            name: component.name,
-            propCount: Object.keys(component.props).length,
-            stateCount: Object.keys(component.state).length,
-            props: component.props,
-            state: component.state,
-            suggestions: [],
-          };
-
-          // Add suggestions based on component data
-          if (Object.keys(component.props).length > 10) {
-            analysis.suggestions.push(
-              "Consider breaking this component into smaller components - it has many props"
-            );
-          }
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Component Analysis:\n\n${JSON.stringify(
-                  analysis,
-                  null,
-                  2
-                )}`,
               },
             ],
           };
