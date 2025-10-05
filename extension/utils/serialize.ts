@@ -6,11 +6,12 @@ export function serialize(data: unknown): unknown {
 
   function serialize(data: unknown): any {
     if (data == null) return data;
-    if (typeof data === "function") return "[Function]";
-    if (typeof data !== "object") return data;
+    if (typeof data === 'symbol') return data.toString();
+    if (typeof data === 'function') return '[Function]';
+    if (typeof data !== 'object') return data;
 
     // Handle circular references
-    if (seen.has(data)) return "[Circular]";
+    if (seen.has(data)) return '[Circular]';
     seen.add(data);
 
     if (Array.isArray(data)) {
@@ -31,7 +32,7 @@ export function serialize(data: unknown): unknown {
         try {
           result[key] = serialize(data[key]);
         } catch {
-          result[key] = "[Unserializable]";
+          result[key] = '[Unserializable]';
         }
       }
     }

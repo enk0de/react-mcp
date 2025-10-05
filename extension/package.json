@@ -24,6 +24,7 @@
     "@react-mcp/core": "workspace:*",
     "@webext-core/messaging": "^2.3.0",
     "@wxt-dev/module-react": "^1.1.5",
+    "es-toolkit": "^1.39.10",
     "motion": "^12.23.22",
     "nanoid": "^5.1.6",
     "react": "^19.2.0",

@@ -3,9 +3,8 @@ export interface FiberNode {
   flags: number;
   subtreeFlags: number;
   deletions: FiberNode[] | null;
-  _debugSource: {
-    fileName: string;
-  };
+  return: FiberNode | null;
   memoizedState: { [key: string]: any } | null;
+  memoizedProps: { [key: string]: any };
   [key: string]: any;
 }

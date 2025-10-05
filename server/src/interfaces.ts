@@ -1,15 +1,18 @@
-export interface ComponentState {
-  id: string;
-  name: string;
-  file: string;
-  props: Record<string, any>;
-  state: Record<string, any>;
+import { RenderedComponentData } from '@react-mcp/core';
+
+export interface ComponentState extends RenderedComponentData {
   tabId: number | undefined;
-  timestamp: number;
 }
 
 export interface ComponentError {
   componentName: string;
   message: string;
-  timestamp: number;
+}
+
+export interface TabState {
+  tabId: number;
+  components: Map<string, ComponentState>;
+  selectedComponentId: string | null;
+  lastHandshake: number;
+  lastPing: number;
 }

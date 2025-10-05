@@ -1,18 +1,18 @@
-import { defineConfig } from "wxt";
+import { defineConfig } from 'wxt';
 
 export default defineConfig({
-  modules: ["@wxt-dev/module-react"],
+  modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: "React MCP",
-    description: "MCP integration for React development",
-    permissions: ["activeTab", "storage"],
-    host_permissions: ["http://localhost/*", "http://127.0.0.1/*"],
+    name: 'React MCP',
+    description: 'MCP integration for React development',
+    permissions: ['tabs', 'activeTab', 'storage'],
+    host_permissions: ['http://localhost/*', 'http://127.0.0.1/*'],
     action: {
-      default_title: "React MCP",
+      default_title: 'React MCP',
     },
   },
-  outDir: "dist",
+  outDir: 'dist',
   webExt: {
-    startUrls: ["http://localhost:5173"],
+    startUrls: ['http://localhost:5173'],
   },
 });

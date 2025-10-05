@@ -1,10 +1,14 @@
 /// <reference path="../.wxt/wxt.d.ts" />
 
-import type { ContentMessage, RenderedComponentData } from "@react-mcp/core";
-import { FiberAnalyzer } from "../libs/fiber-analyzer";
-import { OverlayManager } from "../libs/overlay-manager";
-import { ComponentInspectorPlugin } from "../plugins/component-inspector-plugin";
-import type { Plugin, PluginContext } from "../types/plugin";
+import {
+  safeParseBackgroundMessage,
+  type ContentMessage,
+  type RenderedComponentData,
+} from '@react-mcp/core';
+import { FiberAnalyzer } from '../libs/fiber-analyzer';
+import { OverlayManager } from '../libs/overlay-manager';
+import { ComponentInspectorPlugin } from '../plugins/component-inspector-plugin';
+import type { Plugin, PluginContext } from '../types/plugin';
 
 /**
  * Content script that injects into React applications
@@ -12,9 +16,9 @@ import type { Plugin, PluginContext } from "../types/plugin";
  */
 
 export default defineContentScript({
-  matches: ["<all_urls>"],
-  runAt: "document_start",
-  world: "MAIN", // Run in page context, not isolated world
+  matches: ['<all_urls>'],
+  runAt: 'document_start',
+  world: 'MAIN', // Run in page context, not isolated world
   main() {
     const mcp = new ReactMCP();
     mcp.init();
@@ -24,7 +28,6 @@ export default defineContentScript({
 class ReactMCP implements PluginContext {
   private componentMap = new Map<HTMLElement, RenderedComponentData>();
   private selectedComponentInfo: RenderedComponentData | null = null;
-  private isReactDetected = false;
 
   private plugins: Plugin[] = [];
   private fiberAnalyzer: FiberAnalyzer;
@@ -80,39 +83,29 @@ class ReactMCP implements PluginContext {
 
   private setupMessageListener() {
     // Listen for messages from bridge content script
-    window.addEventListener("message", (event) => {
+    window.addEventListener('message', (event) => {
       if (event.source !== window) return;
 
       const message = event.data;
-      if (message?.source === "react-mcp-bridge") {
-        if (message?.type === "REQUEST_STATE_FOR_HANDSHAKE") {
-          console.log("[React MCP] State for handshake requested");
-          this.sendStateForHandshake();
+
+      if (message?.source === 'react-mcp-bridge') {
+        const parsed = safeParseBackgroundMessage(message.data);
+
+        if (!parsed.success) {
+          console.error('[React MCP] Error parsing message:', parsed.error);
+          return;
+        }
+        console.log(parsed);
+
+        if (parsed.data.type === 'REQUEST_STATE') {
+          this.sendStateToServer();
         }
       }
     });
   }
 
   private setupReactDevToolsHook() {
-    let wrappedHook: any = null;
     let originalHook = (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__;
-
-    Object.defineProperty(window, "__REACT_DEVTOOLS_GLOBAL_HOOK__", {
-      get: () => {
-        return wrappedHook ?? originalHook;
-      },
-      set: (value) => {
-        originalHook = value;
-        wrappedHook = wrap(value);
-
-        if (!this.isReactDetected) {
-          notifyBackgroundScript({
-            type: "REACT_DETECTED",
-          });
-          this.isReactDetected = true;
-        }
-      },
-    });
 
     const wrap = (hook: any) => {
       const originalOnCommitFiberRoot = hook.onCommitFiberRoot;
@@ -125,24 +118,43 @@ class ReactMCP implements PluginContext {
           // Analyze fiber tree with componentMap as registry
           this.fiberAnalyzer.analyze(args[1], this.componentMap);
         } catch (error) {
-          console.error("[React MCP] Error analyzing fiber tree:", error);
+          console.error('[React MCP] Error analyzing fiber tree:', error);
         }
       };
     };
+
+    if (originalHook == null) {
+      let wrappedHook: any = null;
+
+      Object.defineProperty(window, '__REACT_DEVTOOLS_GLOBAL_HOOK__', {
+        get: () => {
+          return wrappedHook ?? originalHook;
+        },
+        set: (value) => {
+          originalHook = value;
+          wrappedHook = wrap(value);
+        },
+      });
+    } else {
+      let originalOnCommitFiberRoot = originalHook.onCommitFiberRoot;
+
+      (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberRoot = (
+        ...args: any[]
+      ) => {
+        originalOnCommitFiberRoot.apply(originalHook, args);
+
+        // Analyze fiber tree with componentMap as registry
+        this.fiberAnalyzer.analyze(args[1], this.componentMap);
+      };
+    }
   }
 
-  private sendStateForHandshake() {
-    // Collect all component data
-    console.log("[React MCP] Preparing state for handshake...");
+  private sendStateToServer() {
+    console.log('[React MCP] Preparing state for server...');
     const components = this.getAllComponents();
 
-    console.log("[React MCP] Sending state for handshake:", {
-      componentsCount: components.size,
-      hasSelectedComponent: this.selectedComponentInfo != null,
-    });
-
     notifyBackgroundScript({
-      type: "STATE_FOR_HANDSHAKE",
+      type: 'SET_STATE',
       data: {
         components: Array.from(components.values()),
         selectedComponent: this.selectedComponentInfo,
@@ -165,10 +177,10 @@ function notifyBackgroundScript(message: ContentMessage) {
   // Send message via window.postMessage to ISOLATED world content script
   window.postMessage(
     {
-      source: "react-mcp-main",
+      source: 'react-mcp-main',
       type: message.type,
       data: message.data,
     },
-    "*"
+    '*',
   );
 }

@@ -3,6 +3,7 @@ packages:
   - extension
   - server
   - test-app
+  - babel-plugin-react-source-location
 
 ignoredBuiltDependencies:
   - esbuild

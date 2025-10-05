@@ -1,11 +1,11 @@
-import type { Plugin, PluginContext } from "../types/plugin";
+import type { Plugin, PluginContext } from '../types/plugin';
 
 /**
  * Plugin that enables component inspection via Alt+Click
  * Shows component overlay and sends component data to background script
  */
 export class ComponentInspectorPlugin implements Plugin {
-  readonly name = "ComponentInspectorPlugin";
+  readonly name = 'ComponentInspectorPlugin';
 
   private context: PluginContext;
   private selectedElement: HTMLElement | null = null;
@@ -46,7 +46,7 @@ export class ComponentInspectorPlugin implements Plugin {
 
   private setupClickListener(): void {
     document.addEventListener(
-      "click",
+      'click',
       (e: MouseEvent) => {
         // Check if Alt/Option key is pressed
         if (!e.altKey) return;
@@ -58,20 +58,20 @@ export class ComponentInspectorPlugin implements Plugin {
         const component = this.context.getComponent(target);
 
         if (component != null) {
-          console.log("[React MCP] Component clicked:", component);
+          console.log('[React MCP] Component clicked:', component);
 
           // Store selected component info
           this.context.setSelectedComponent(component);
 
           this.context.sendMessage({
-            type: "COMPONENT_CLICKED",
+            type: 'SELECT_COMPONENT',
             data: component,
           });
 
           this.highlightComponent(target);
         }
       },
-      true
+      true,
     );
   }
 
@@ -91,7 +91,7 @@ export class ComponentInspectorPlugin implements Plugin {
     };
 
     // Listen for scroll events (passive for better performance)
-    window.addEventListener("scroll", scheduleUpdate, {
+    window.addEventListener('scroll', scheduleUpdate, {
       passive: true,
       capture: true,
     });
@@ -107,13 +107,13 @@ export class ComponentInspectorPlugin implements Plugin {
 
     // Create overlay if it doesn't exist
     if (this.selectedOverlay == null) {
-      const overlay = document.createElement("div");
-      overlay.style.position = "fixed";
-      overlay.style.backgroundColor = "rgba(255, 165, 0, 0.3)"; // Semi-transparent orange
-      overlay.style.border = "2px solid orange";
-      overlay.style.zIndex = "9999";
-      overlay.style.pointerEvents = "none"; // Allow clicks to pass through
-      overlay.style.transition = "none"; // Disable transitions for smooth updates
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.backgroundColor = 'rgba(255, 165, 0, 0.3)'; // Semi-transparent orange
+      overlay.style.border = '2px solid orange';
+      overlay.style.zIndex = '9999';
+      overlay.style.pointerEvents = 'none'; // Allow clicks to pass through
+      overlay.style.transition = 'none'; // Disable transitions for smooth updates
 
       document.body.appendChild(overlay);
       this.selectedOverlay = overlay;

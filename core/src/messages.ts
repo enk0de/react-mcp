@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * Message schemas and types for type-safe communication between
@@ -12,9 +12,15 @@ import { z } from "zod";
 const RenderedComponentDataSchema = z.object({
   id: z.string(),
   name: z.string(),
-  file: z.string(),
   props: z.record(z.any(), z.any()),
   state: z.record(z.any(), z.any()),
+  source: z
+    .object({
+      fileName: z.string(),
+      lineNumber: z.number(),
+      columnNumber: z.number(),
+    })
+    .optional(),
 });
 
 export type RenderedComponentData = z.infer<typeof RenderedComponentDataSchema>;
@@ -23,28 +29,22 @@ export type RenderedComponentData = z.infer<typeof RenderedComponentDataSchema>;
 // Content Script → Background Script (Or Just Bridge) Messages
 // ============================================================================
 
-const ContentMessageSchema = z.discriminatedUnion("type", [
+const ContentMessageSchema = z.discriminatedUnion('type', [
   z.object({
-    type: z.literal("FIBER_COMMITED"),
-    data: z.array(RenderedComponentDataSchema),
+    type: z.literal('SELECT_COMPONENT'),
+    data: z.object({
+      id: z.string(),
+    }),
   }),
   z.object({
-    type: z.literal("REACT_DETECTED"),
-    data: z.undefined().optional(),
-  }),
-  z.object({
-    type: z.literal("COMPONENT_CLICKED"),
-    data: RenderedComponentDataSchema,
-  }),
-  z.object({
-    type: z.literal("STATE_FOR_HANDSHAKE"),
+    type: z.literal('SET_STATE'),
     data: z.object({
       components: z.array(RenderedComponentDataSchema),
       selectedComponent: RenderedComponentDataSchema.nullable(),
     }),
   }),
   z.object({
-    type: z.literal("OPEN_SETTINGS_POPUP"),
+    type: z.literal('OPEN_SETTINGS_POPUP'),
     data: z.undefined().optional(),
   }),
 ]);
@@ -69,13 +69,13 @@ export function safeParseContentMessage(data: unknown) {
 // Background Script → Content Script Messages
 // ============================================================================
 
-const BackgroundMessageSchema = z.discriminatedUnion("type", [
+const BackgroundMessageSchema = z.discriminatedUnion('type', [
   z.object({
-    type: z.literal("TOGGLE_FEATURES"),
+    type: z.literal('TOGGLE_FEATURES'),
     data: z.undefined().optional(),
   }),
   z.object({
-    type: z.literal("REQUEST_STATE_FOR_HANDSHAKE"),
+    type: z.literal('REQUEST_STATE'),
     data: z.undefined().optional(),
   }),
 ]);
@@ -100,55 +100,33 @@ export function safeParseBackgroundMessage(data: unknown) {
 // Background Script → MCP Server Messages (WebSocket)
 // ============================================================================
 
-const WebSocketMessageSchema = z.discriminatedUnion("type", [
+const WebSocketMessageSchema = z.discriminatedUnion('type', [
   z.object({
-    type: z.literal("HANDSHAKE"),
+    type: z.literal('SELECT_COMPONENT'),
+    data: z.object({
+      tabId: z.number(),
+      id: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('SET_STATE'),
     data: z.object({
       tabId: z.number(),
       components: z.array(RenderedComponentDataSchema),
       selectedComponent: RenderedComponentDataSchema.nullable(),
     }),
   }),
-  z.object({
-    type: z.literal("PING"),
-    data: z.object({
-      tabId: z.number(),
-    }),
-  }),
-  z.object({
-    type: z.literal("FIBER_COMMITED"),
-    data: z.object({
-      components: z.array(RenderedComponentDataSchema),
-      tabId: z.number(),
-    }),
-  }),
-  z.object({
-    type: z.literal("REACT_DETECTED"),
-    data: z.object({
-      tabId: z.number(),
-    }),
-  }),
-  z.object({
-    type: z.literal("COMPONENT_CLICKED"),
-    data: RenderedComponentDataSchema.extend({
-      tabId: z.number(),
-    }),
-  }),
 ]);
 
+export type WebSocketMessage = z.infer<typeof WebSocketMessageSchema>;
+
 // ============================================================================
-// MCP Server → Background Script Messages (WebSocket)
+// MCP Server → Background Script (WebSocket)
 // ============================================================================
 
-const MCPServerMessageSchema = z.discriminatedUnion("type", [
+const MCPServerMessageSchema = z.discriminatedUnion('type', [
   z.object({
-    type: z.literal("HANDSHAKE_ACK"),
-    data: z.object({
-      tabId: z.number(),
-    }),
-  }),
-  z.object({
-    type: z.literal("PONG"),
+    type: z.literal('REQUEST_INITIAL_STATE'),
     data: z.object({
       tabId: z.number(),
     }),
@@ -156,22 +134,6 @@ const MCPServerMessageSchema = z.discriminatedUnion("type", [
 ]);
 
 export type MCPServerMessage = z.infer<typeof MCPServerMessageSchema>;
-
-/**
- * Validate and parse MCP server message
- */
-export function parseMCPServerMessage(data: unknown): MCPServerMessage {
-  return MCPServerMessageSchema.parse(data);
-}
-
-/**
- * Safe parse that returns success/error result
- */
-export function safeParseMCPServerMessage(data: unknown) {
-  return MCPServerMessageSchema.safeParse(data);
-}
-
-export type WebSocketMessage = z.infer<typeof WebSocketMessageSchema>;
 
 /**
  * Validate and parse WebSocket message
@@ -185,6 +147,20 @@ export function parseWebSocketMessage(data: unknown): WebSocketMessage {
  */
 export function safeParseWebSocketMessage(data: unknown) {
   return WebSocketMessageSchema.safeParse(data);
+}
+
+/**
+ * Validate and parse MCPServer message
+ */
+export function parseMCPServerMessage(data: unknown): MCPServerMessage {
+  return MCPServerMessageSchema.parse(data);
+}
+
+/**
+ * Safe parse that returns success/error result
+ */
+export function safeParseMCPServerMessage(data: unknown) {
+  return MCPServerMessageSchema.safeParse(data);
 }
 
 // ============================================================================

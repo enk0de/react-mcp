@@ -1,20 +1,20 @@
-import { ErrorBoundary, Suspense } from "@suspensive/react";
-import { useState } from "react";
-import "./App.css";
-import Counter from "./components/Counter";
-import UserCard from "./components/UserCard";
+import { ErrorBoundary, Suspense } from '@suspensive/react';
+import { useState } from 'react';
+import './App.css';
+import Counter from './components/Counter';
+import UserCard from './components/UserCard';
 
 function App() {
   const [showError, setShowError] = useState(false);
 
   if (showError) {
-    throw new Error("Test React Error!");
+    throw new Error('Test React Error!');
   }
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>React MCP Test App :)</h1>
+        <h1>React MCP Test App :</h1>
         <p>Test app for React MCP browser extension</p>
       </header>
 
@@ -27,7 +27,7 @@ function App() {
         <section className="section">
           <h2>User Cards</h2>
           <div className="card-grid">
-            <UserCard name="Alice" role="Developer" />{" "}
+            <UserCard name="Alice" role="Developer" />{' '}
             <ErrorBoundary
               fallback={(props) => (
                 <>
@@ -40,16 +40,16 @@ function App() {
                 <UserCard name="Bob" role="Designer" />
               </Suspense>
             </ErrorBoundary>
-            <UserCard name="Charlie" role="Manager" />
+            <UserCard name="Charlie" role="Jihoon" avatarColor="#000" />
           </div>
         </section>
 
         <section className="section">
-          <h2>Test Error Boundary</h2>
+          <h2>에러 바운더리</h2>
           <button className="error-button" onClick={() => setShowError(true)}>
             Trigger Error
           </button>
-          <p style={{ fontSize: "14px", color: "#666" }}>
+          <p style={{ fontSize: '14px', color: '#666' }}>
             Click to test error detection and overlay
           </p>
         </section>

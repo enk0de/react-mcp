@@ -1,8 +1,9 @@
-import type { RenderedComponentData } from "@react-mcp/core";
-import { nanoid } from "nanoid";
-import type { FiberNode } from "../types/fiber-node";
-import { getComponentName } from "../utils/get-component-name";
-import { serialize } from "../utils/serialize";
+import type { RenderedComponentData } from '@react-mcp/core';
+import { omit } from 'es-toolkit';
+import { nanoid } from 'nanoid';
+import type { FiberNode } from '../types/fiber-node';
+import { getComponentName } from '../utils/get-component-name';
+import { serialize } from '../utils/serialize';
 
 export interface ComponentRegistry {
   get(element: HTMLElement): RenderedComponentData | undefined;
@@ -20,7 +21,7 @@ export const FiberFlags = {
 export class FiberAnalyzer {
   analyze(
     fiberRoot: { current: FiberNode } | null | undefined,
-    componentRegistry: ComponentRegistry
+    componentRegistry: ComponentRegistry,
   ): void {
     if (fiberRoot == null || fiberRoot.current == null) return;
 
@@ -29,7 +30,7 @@ export class FiberAnalyzer {
 
   private removeDeletedFiber(
     fiber: FiberNode,
-    componentRegistry: ComponentRegistry
+    componentRegistry: ComponentRegistry,
   ): void {
     if (!fiber) return;
 
@@ -46,7 +47,7 @@ export class FiberAnalyzer {
 
   private traverseFiber(
     fiber: FiberNode,
-    componentRegistry: ComponentRegistry
+    componentRegistry: ComponentRegistry,
   ): void {
     if (!fiber) return;
 
@@ -54,7 +55,7 @@ export class FiberAnalyzer {
       console.log(
         `[FiberAnalyzer] Processing ${
           fiber.deletions.length
-        } deletions in ${getComponentName(fiber)}`
+        } deletions in ${getComponentName(fiber)}`,
       );
 
       fiber.deletions.forEach((deletedFiber: FiberNode) => {
@@ -76,6 +77,7 @@ export class FiberAnalyzer {
 
     if (fiber.subtreeFlags | 0) {
       let child = fiber.child;
+
       while (child) {
         this.traverseFiber(child, componentRegistry);
         child = child.sibling;
@@ -85,13 +87,13 @@ export class FiberAnalyzer {
 
   private processFiberFlags(
     fiber: FiberNode,
-    componentRegistry: ComponentRegistry
+    componentRegistry: ComponentRegistry,
   ): void {
     const { Placement, Update, Deletion } = FiberFlags;
 
     if (fiber.flags & Placement) {
       console.log(
-        `[FiberAnalyzer] Component placed: ${getComponentName(fiber)}`
+        `[FiberAnalyzer] Component placed: ${getComponentName(fiber)}`,
       );
       if (fiber.stateNode && fiber.stateNode instanceof HTMLElement) {
         this.registerComponent(fiber, componentRegistry);
@@ -100,7 +102,7 @@ export class FiberAnalyzer {
 
     if (fiber.flags & Update) {
       console.log(
-        `[FiberAnalyzer] Component updated: ${getComponentName(fiber)}`
+        `[FiberAnalyzer] Component updated: ${getComponentName(fiber)}`,
       );
       if (fiber.stateNode && fiber.stateNode instanceof HTMLElement) {
         this.updateComponent(fiber, componentRegistry);
@@ -110,8 +112,8 @@ export class FiberAnalyzer {
     if (fiber.flags & Deletion) {
       console.log(
         `[FiberAnalyzer] Component marked for deletion: ${getComponentName(
-          fiber
-        )}`
+          fiber,
+        )}`,
       );
       return;
     }
@@ -119,7 +121,7 @@ export class FiberAnalyzer {
 
   private registerComponent(
     fiber: FiberNode,
-    componentRegistry: ComponentRegistry
+    componentRegistry: ComponentRegistry,
   ): void {
     const data = transformFiber(fiber);
 
@@ -132,7 +134,7 @@ export class FiberAnalyzer {
 
   private updateComponent(
     fiber: FiberNode,
-    componentRegistry: ComponentRegistry
+    componentRegistry: ComponentRegistry,
   ): void {
     const data = transformFiber(fiber);
 
@@ -161,11 +163,26 @@ function transformFiber(fiber: FiberNode): RenderedComponentData | null {
     return null;
   }
 
+  const props: Record<string, any> = serialize(fiber.memoizedProps) || {};
+  const source = (props as any)?.__componentSource;
+
   return {
     id: nanoid(),
-    name: getComponentName(fiber),
-    file: fiber._debugSource?.fileName || "unknown",
-    props: serialize(fiber.memoizedProps) || {},
+    name: getComponentName(fiber) ?? 'Unknown',
+    props: omit(props, ['__componentSource']),
     state: serialize(fiber.memoizedState) || {},
+    source: source
+      ? {
+          fileName: source.fileName,
+          lineNumber: source.lineNumber,
+          columnNumber: source.columnNumber,
+        }
+      : undefined,
   };
+}
+
+function isComponentFiber(
+  fiber: FiberNode,
+): fiber is FiberNode & { type: Function | object } {
+  return typeof fiber.type === 'function' || typeof fiber.type === 'object';
 }
